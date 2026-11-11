@@ -190,3 +190,134 @@
     const mv = { x: 0, z: 0 }, ar = { u: 0, d: 0, l: 0, r: 0 };
     const jz = document.getElementById('joy'), jk = document.getElementById('knob');
     let tid = null;
+jz.ontouchstart = e => { tid = e.changedTouches[0].identifier; uj(e.changedTouches[0]); };
+    jz.ontouchmove = e => { for (let t of e.changedTouches) { if (t.identifier === tid) uj(t); } };
+    const rj = e => {
+      for (let t of e.changedTouches) {
+        if (t.identifier === tid) { tid = null; mv.x = 0; mv.z = 0; jk.style.transform = 'translate(0,0)'; }
+      }
+    };
+    jz.ontouchend = rj; jz.ontouchcancel = rj;
+    function uj(t) {
+      const r = jz.getBoundingClientRect();
+      let dx = t.clientX - (r.left + 57), dy = t.clientY - (r.top + 57);
+      const d = Math.hypot(dx, dy);
+      if (d > 36) { dx = dx / d * 36; dy = dy / d * 36; }
+      jk.style.transform = `translate(${dx}px, ${dy}px)`;
+      mv.x = dx / 36; mv.z = dy / 36;
+    }
+    ['u', 'd', 'l', 'r'].forEach(k => {
+      const el = document.getElementById(k);
+      el.ontouchstart = () => ar[k] = 1;
+      el.ontouchend = () => ar[k] = 0;
+    });
+    const pr = document.getElementById('prompt'), sh = document.getElementById('shop');
+    pr.onclick = () => {
+      if (!run) return;
+      if (zone === 'c') {
+        if (!job) { job = true; snd(520, 'triangle', 0.2); pr.textContent = 'Work Shift (+10 Coins)'; }
+        else { coins += 10; mins += 1.2; snd(680, 'sine', 0.15); hud(); }
+      } else if (zone === 'p') { document.getElementById('sc').textContent = coins; sh.style.display = 'flex'; }
+    };
+    document.getElementById('bt').onclick = () => {
+      if (coins >= 30 && !bigT) {
+        coins -= 30; bigT = true; tl.intensity = 4.2; tl.distance = 40;
+        snd(740, 'triangle', 0.25); document.getElementById('sc').textContent = coins; hud();
+      }
+    };
+    document.getElementById('bp').onclick = () => {
+      if (coins >= 50 && !gun) {
+        coins -= 50; gun = true; document.getElementById('fire').style.display = 'flex';
+        snd(820, 'sawtooth', 0.25); document.getElementById('sc').textContent = coins; hud();
+      }
+    };
+    document.getElementById('cs').onclick = () => sh.style.display = 'none';
+    document.getElementById('fire').ontouchstart = () => {
+      if (!gun || !run) return;
+      snd(140, 'sawtooth', 0.2, 0.3);
+      mons.forEach(m => { if (m.position.distanceTo(pl.position) < 20) { m.userData.s = 6; m.position.z -= 8; } });
+    };
+    function hud() {
+      document.getElementById('nl').textContent = `NIGHT ${night} / 9`;
+      document.getElementById('ct').textContent = coins;
+      document.getElementById('gt').textContent = (bigT ? 'Big Torch' : 'Small Torch') + (gun ? ' + Pistol' : '');
+      const tot = Math.floor(mins), h = Math.floor(tot / 60), m = tot % 60;
+      document.getElementById('clock').textContent = `${h}:${m < 10 ? '0' + m : m} PM`;
+      const g = document.getElementById('gs');
+      if (mins >= 550) { g.textContent = 'GATE LOCKED!'; g.style.color = '#ef4444'; gt.visible = true; }
+      else { g.textContent = 'Gate Closes: 9:10 PM'; g.style.color = '#4ade80'; gt.visible = false; }
+    }
+    function go() {
+      pl.position.set(0, 0, 0); mins = 539; gt.visible = false; sh.style.display = 'none';
+      document.getElementById('start').style.display = 'none';
+      document.getElementById('end').style.display = 'none';
+      spawn(); hud(); run = true;
+    }
+    function over(st) {
+      run = false;
+      const es = document.getElementById('end'), et = document.getElementById('et');
+      const em = document.getElementById('em'), nb = document.getElementById('nb');
+      if (st === 'win') {
+        snd(600, 'triangle', 0.4);
+        if (night < 9) {
+          et.style.color = '#38bdf8'; et.textContent = 'YOU MADE IT...';
+          em.textContent = `Night ${night} survived, but it's not the end.`;
+          nb.textContent = `START NIGHT ${night + 1}`;
+          nb.onclick = () => { night++; go(); };
+        } else {
+          et.style.color = '#4ade80'; et.textContent = 'ALL 9 NIGHTS SURVIVED!';
+          em.textContent = 'You survived and made it home. You win!';
+          nb.textContent = 'PLAY AGAIN';
+          nb.onclick = () => { night = 1; coins = 0; job = false; bigT = false; gun = false; go(); };
+        }
+      } else {
+        snd(110, 'sawtooth', 0.5, 0.25); et.style.color = '#ef4444';
+        et.textContent = st === 'gate' ? 'LOCKED OUT AFTER 9:10 PM' : 'CAUGHT IN THE DARK';
+        em.textContent = st === 'gate' ? 'Gate closed at 9:10 PM.' : 'A shadow stalker caught you.';
+        nb.textContent = `RETRY NIGHT ${night}`; nb.onclick = go;
+      }
+      es.style.display = 'flex';
+    }
+    document.getElementById('sbtn').onclick = go;
+    let lt = performance.now();
+    function loop(now) {
+      requestAnimationFrame(loop);
+      const dt = Math.min((now - lt) / 1000, 0.05); lt = now;
+      if (run && sh.style.display !== 'flex') {
+        mins += dt * 0.2; hud();
+        let vx = mv.x + (ar.r - ar.l), vz = mv.z + (ar.d - ar.u), ln = Math.hypot(vx, vz);
+        if (ln > 0.05) {
+          vx /= Math.max(ln, 1); vz /= Math.max(ln, 1);
+          pl.position.x = Math.max(-5.8, Math.min(5.8, pl.position.x + vx * 7.5 * dt));
+          pl.position.z = Math.max(-121, Math.min(4, pl.position.z + vz * 7.5 * dt));
+          pl.rotation.y = Math.atan2(-vx, -vz);
+        }
+        cam.position.lerp(new THREE.Vector3(pl.position.x * 0.6, 4.2, pl.position.z + 6.5), 0.12);
+        cam.lookAt(pl.position.x, 1.2, pl.position.z - 6);
+        if (pl.position.distanceTo(new THREE.Vector3(-6, 0, -25)) < 4.5) {
+          zone = 'c'; pr.style.display = 'block';
+          pr.textContent = job ? 'Tap: Work Coffee Shift (+10 Coins)' : 'Tap: Apply for Coffee Job';
+        } else if (pl.position.distanceTo(new THREE.Vector3(5.5, 0, -45)) < 4.5) {
+          zone = 'p'; pr.style.display = 'block'; pr.textContent = 'Tap: Open Supply Computer';
+        } else { zone = null; pr.style.display = 'none'; }
+        if (pl.position.z <= -118.5) over(mins < 550 ? 'win' : 'gate');
+        const sp = (2.4 + night * 0.25) * (bigT ? 0.65 : 1);
+        mons.forEach(m => {
+          if (m.userData.s > 0) { m.userData.s -= dt; return; }
+          const d = m.position.distanceTo(pl.position);
+          if (d < 18) {
+            const dir = new THREE.Vector3().subVectors(pl.position, m.position).normalize();
+            m.position.x += dir.x * sp * dt; m.position.z += dir.z * sp * dt;
+          } else {
+            m.position.x += m.userData.d * 1.8 * dt;
+            if (Math.abs(m.position.x) > 5.5) m.userData.d *= -1;
+          }
+          if (d < 1.15) over('caught');
+        });
+      }
+      ren.render(sc, cam);
+    }
+    loop(performance.now());
+  </script>
+</body>
+</html>
