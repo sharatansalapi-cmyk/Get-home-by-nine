@@ -1,17 +1,192 @@
-
-
-jz.ontouchstart=e=>{tid=e.changedTouches[0].identifier;uj(e.changedTouches[0])};
-jz.ontouchmove=e=>{for(let t of e.changedTouches)if(t.identifier===tid)uj(t)};
-const rj=e=>{for(let t of e.changedTouches)if(t.identifier===tid){tid=null;mv.x=0;mv.z=0;jk.style.transform='translate(0,0)'}};
-jz.ontouchend=rj;jz.ontouchcancel=rj;
-function uj(t){const r=jz.getBoundingClientRect();let dx=t.clientX-(r.left+57),dy=t.clientY-(r.top+57),d=Math.hypot(dx,dy);if(d>36){dx=dx/d*36;dy=dy/d*36}jk.style.transform=`translate(${dx}px,${dy}px)`;mv.x=dx/36;mv.z=dy/36}
-['u','d','l','r'].forEach(k=>{const el=document.getElementById(k);el.ontouchstart=()=>ar[k]=1;el.ontouchend=()=>ar[k]=0});
-const pr=document.getElementById('prompt'),sh=document.getElementById('shop');
-pr.onclick=()=>{if(!run)return;if(zone==='c'){if(!job){job=true;snd(520,'triangle',.2);pr.textContent='Work Shift (+10 Coins)'}else{coins+=10;mins+=1.2;snd(680,'sine',.15);hud()}}else if(zone==='p'){document.getElementById('sc').textContent=coins;sh.style.display='flex'}};
-document.getElementById('bt').onclick=()=>{if(coins>=30&&!bigT){coins-=30;bigT=true;tl.intensity=4.2;tl.distance=40;snd(740,'triangle',.25);document.getElementById('sc').textContent=coins;hud()}};
-document.getElementById('bp').onclick=()=>{if(coins>=50&&!gun){coins-=50;gun=true;document.getElementById('fire').style.display='flex';snd(820,'sawtooth',.25);document.getElementById('sc').textContent=coins;hud()}};
-document.getElementById('cs').onclick=()=>sh.style.display='none';
-document.getElementById('fire').ontouchstart=()=>{if(!gun||!run)return;snd(140,'sawtooth',.2,.3);mons.forEach(m=>{if(m.position.distanceTo(pl.position)<20){m.userData.s=6;m.position.z-=8}})};
-function hud(){document.getElementById('nl').textContent=`NIGHT ${night} / 9`;document.getElementById('ct').textContent=coins;document.getElementById('gt').textContent=(bigT?'Big Torch':'Small Torch')+(gun?' + Pistol':'');const tot=Math.floor(mins),h=Math.floor(tot/60),m=tot%60;document.getElementById('clock').textContent=`${h}:${m<10?'0'+m:m} PM`;const g=document.getElementById('gs');if(mins>=550){g.textContent='GATE LOCKED!';g.style.color='#ef4444';gt.visible=true}else{g.textContent='Gate Closes: 9:10 PM';g.style.color='#4ade80';gt.visible=false}}
-(bigT?.65:1);mons.forEach(m=>{if(m.userData.s>0){m.userData.s-=dt;return}const d=m.position.distanceTo(pl.position);if(d<18){const dir=new THREE.Vector3().subVectors(pl.position,m.position).normalize();m.position.x+=dir.xspdt;m.position.z+=dir.zspdt}else{m.position.x+=m.userData.d1.8dt;if(Math.abs(m.position.x)>5.5)m.userData.d=-1}if(d<1.15)over('caught')})}ren.render(sc,cam)}
-loop(performance.now());
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Get Home By 9</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #05050a; font-family: sans-serif; color: #fff;
+      touch-action: none;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    #hud {
+      position: fixed; top: 10px; left: 10px; right: 10px;
+      display: flex; justify-content: space-between;
+      pointer-events: none; z-index: 10; font-size: 13px;
+    }
+    .box {
+      background: rgba(10, 12, 20, 0.85);
+      border: 1px solid #334155;
+      padding: 8px 12px; border-radius: 10px;
+    }
+    #clock { font-size: 18px; font-weight: 800; color: #ff5555; }
+    #prompt {
+      position: fixed; top: 24%; left: 50%; transform: translateX(-50%);
+      background: #000; border: 1px solid #ffd43b; color: #ffd43b;
+      padding: 10px 16px; border-radius: 20px;
+      font-weight: 700; font-size: 14px; display: none; z-index: 15;
+    }
+    #fire {
+      position: fixed; bottom: 160px; right: 20px;
+      width: 58px; height: 58px; border-radius: 50%;
+      background: #dc2626; border: 2px solid #fff; color: #fff;
+      font-weight: 800; font-size: 12px;
+      display: none; align-items: center; justify-content: center; z-index: 20;
+    }
+    #joy {
+      position: fixed; bottom: 20px; left: 20px;
+      width: 115px; height: 115px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.12);
+      border: 2px solid rgba(255, 255, 255, 0.35); z-index: 20;
+    }
+    #knob {
+      position: absolute; top: 34px; left: 34px;
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.75); pointer-events: none;
+    }
+    #dpad {
+      position: fixed; bottom: 20px; right: 20px;
+      width: 130px; height: 130px; z-index: 20;
+    }
+    .arr {
+      position: absolute; width: 42px; height: 42px; border-radius: 50%;
+      background: rgba(30, 35, 50, 0.85);
+      border: 2px solid rgba(255, 255, 255, 0.55);
+      color: #fff; font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #u { top: 0; left: 44px; }
+    #d { bottom: 0; left: 44px; }
+    #l { top: 44px; left: 0; }
+    #r { top: 44px; right: 0; }
+    .ov {
+      position: fixed; inset: 0; background: rgba(5, 6, 12, 0.95);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 20px; text-align: center; z-index: 50;
+    }
+    .ov h1 { font-size: 28px; color: #ff4d4d; margin-bottom: 10px; }
+    .ov p { max-width: 360px; color: #cbd5e1; margin-bottom: 16px; font-size: 14px; line-height: 1.4; }
+    .btn {
+      background: #e11d48; color: #fff; border: none;
+      padding: 12px 24px; border-radius: 10px;
+      font-size: 15px; font-weight: 700; margin: 6px;
+    }
+    .card {
+      background: #0f172a; border: 1px solid #38bdf8;
+      border-radius: 10px; padding: 12px;
+      width: 100%; max-width: 300px; margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="hud">
+    <div class="box">
+      <div id="nl" style="color:#a5d8ff;font-weight:700">NIGHT 1 / 9</div>
+      <div>Coins: <b id="ct" style="color:#ffd43b">0</b></div>
+      <div>Gear: <b id="gt">Small Torch</b></div>
+    </div>
+    <div class="box" style="text-align:right">
+      <div id="clock">8:59 PM</div>
+      <div id="gs" style="color:#4ade80">Gate Closes: 9:10 PM</div>
+    </div>
+  </div>
+  <div id="prompt">Interact</div>
+  <div id="fire">FIRE</div>
+  <div id="joy"><div id="knob"></div></div>
+  <div id="dpad">
+    <div class="arr" id="u">▲</div>
+    <div class="arr" id="d">▼</div>
+    <div class="arr" id="l">◄</div>
+    <div class="arr" id="r">►</div>
+  </div>
+  <div class="ov" id="start">
+    <h1>GET HOME BY 9</h1>
+    <p>Start at 8:59 PM. Work at the glowing Coffee Station for coins, buy gear at the Supply Computer, and reach your Home Gate before 9:10 PM across 9 Nights.</p>
+    <button class="btn" id="sbtn">START NIGHT 1</button>
+  </div>
+  <div class="ov" id="shop" style="display:none">
+    <h1 style="color:#38bdf8">COMPUTER</h1>
+    <p>Coins: <b id="sc" style="color:#ffd43b">0</b></p>
+    <div class="card"><b>Big Torch (30 Coins)</b><br><button class="btn" id="bt">Buy (30)</button></div>
+    <div class="card"><b>Pistol (50 Coins)</b><br><button class="btn" id="bp">Buy (50)</button></div>
+    <button class="btn" style="background:#334155" id="cs">Close</button>
+  </div>
+  <div class="ov" id="end" style="display:none">
+    <h1 id="et">YOU MADE IT...</h1>
+    <p id="em">But it's not the end.</p>
+    <button class="btn" id="nb">CONTINUE</button>
+  </div>
+  <script src="https://cloudflare.com"></script>
+  <script>
+    let night = 1, coins = 0, job = false, bigT = false, gun = false;
+    let run = false, mins = 539, zone = null, actx = null;
+    function snd(f, t, d, v = 0.15) {
+      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = t; o.frequency.value = f;
+      g.gain.setValueAtTime(v, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + d);
+      o.connect(g); g.connect(actx.destination);
+      o.start(); o.stop(actx.currentTime + d);
+    }
+    const ren = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: false });
+    ren.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    ren.setSize(innerWidth, innerHeight);
+    const sc = new THREE.Scene();
+    sc.background = new THREE.Color(0x04050c);
+    sc.fog = new THREE.FogExp2(0x04050c, 0.045);
+    const cam = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 120);
+    onresize = () => { cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); ren.setSize(innerWidth, innerHeight); };
+    sc.add(new THREE.AmbientLight(0x1e293b, 0.6));
+    const rd = new THREE.Mesh(new THREE.PlaneGeometry(14, 160), new THREE.MeshStandardMaterial({ color: 0x111318 }));
+    rd.rotation.x = -Math.PI / 2; rd.position.z = -60; sc.add(rd);
+    for (let z = 10; z > -135; z -= 8) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 3), new THREE.MeshBasicMaterial({ color: 0x64748b }));
+      m.rotation.x = -Math.PI / 2; m.position.set(0, 0.02, z); sc.add(m);
+    }
+    for (let z = 0; z > -130; z -= 22) {
+      [-6.5, 6.5].forEach(x => {
+        const p = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 5), new THREE.MeshStandardMaterial({ color: 0x334155 }));
+        p.position.set(x, 2.5, z); sc.add(p);
+        const l = new THREE.PointLight(0xffb703, 1.1, 16);
+        l.position.set(x * 0.85, 4.8, z); sc.add(l);
+        const b = new THREE.Mesh(new THREE.BoxGeometry(8, 12, 14), new THREE.MeshStandardMaterial({ color: 0x0f172a }));
+        b.position.set(x > 0 ? 12 : -12, 6, z - 5); sc.add(b);
+      });
+    }
+    const cf = new THREE.Mesh(new THREE.BoxGeometry(5, 4, 7), new THREE.MeshStandardMaterial({ color: 0x78350f }));
+    cf.position.set(-8.5, 2, -25); sc.add(cf);
+    const cl = new THREE.PointLight(0xf59e0b, 2.2, 15); cl.position.set(-5.5, 3.5, -25); sc.add(cl);
+    const cp = new THREE.Mesh(new THREE.BoxGeometry(3, 2.5, 4), new THREE.MeshStandardMaterial({ color: 0x0284c7 }));
+    cp.position.set(7.5, 1.25, -45); sc.add(cp);
+    const cpl = new THREE.PointLight(0x38bdf8, 2, 14); cpl.position.set(5.5, 2.5, -45); sc.add(cpl);
+    const hm = new THREE.Mesh(new THREE.BoxGeometry(12, 8, 10), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+    hm.position.set(0, 4, -130); sc.add(hm);
+    const hl = new THREE.PointLight(0x4ade80, 2.5, 22); hl.position.set(0, 4, -122); sc.add(hl);
+    const gt = new THREE.Mesh(new THREE.BoxGeometry(12, 3.5, 0.4), new THREE.MeshStandardMaterial({ color: 0x991b1b }));
+    gt.position.set(0, 1.75, -120); gt.visible = false; sc.add(gt);
+    const pl = new THREE.Group();
+    const bm = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.7), new THREE.MeshStandardMaterial({ color: 0x38bdf8 }));
+    bm.position.y = 0.85; pl.add(bm);
+    const tl = new THREE.SpotLight(0xffffff, 2.2, 24, Math.PI / 5, 0.4);
+    tl.position.set(0, 1.4, -0.3);
+    const tt = new THREE.Object3D(); tt.position.set(0, 1, -10);
+    pl.add(tl); pl.add(tt); tl.target = tt; sc.add(pl);
+    const mons = [];
+    function spawn() {
+      mons.forEach(m => sc.remove(m)); mons.length = 0;
+      for (let i = 0; i < Math.min(2 + night, 8); i++) {
+        const m = new THREE.Mesh(new THREE.ConeGeometry(0.65, 2.4, 8), new THREE.MeshStandardMaterial({ color: 0x09090b, emissive: 0x3b0764, emissiveIntensity: 0.5 }));
+        m.position.set((Math.random() - 0.5) * 10, 1.2, -30 - Math.random() * 82);
+        m.userData = { d: Math.random() > 0.5 ? 1 : -1, s: 0 };
+        sc.add(m); mons.push(m);
+      }
+    }
+    const mv = { x: 0, z: 0 }, ar = { u: 0, d: 0, l: 0, r: 0 };
+    const jz = document.getElementById('joy'), jk = document.getElementById('knob');
+    let tid = null;
