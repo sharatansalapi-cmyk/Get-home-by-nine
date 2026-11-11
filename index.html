@@ -1,1 +1,15 @@
 
+
+jz.ontouchstart=e=>{tid=e.changedTouches[0].identifier;uj(e.changedTouches[0])};
+jz.ontouchmove=e=>{for(let t of e.changedTouches)if(t.identifier===tid)uj(t)};
+const rj=e=>{for(let t of e.changedTouches)if(t.identifier===tid){tid=null;mv.x=0;mv.z=0;jk.style.transform='translate(0,0)'}};
+jz.ontouchend=rj;jz.ontouchcancel=rj;
+function uj(t){const r=jz.getBoundingClientRect();let dx=t.clientX-(r.left+57),dy=t.clientY-(r.top+57),d=Math.hypot(dx,dy);if(d>36){dx=dx/d*36;dy=dy/d*36}jk.style.transform=`translate(${dx}px,${dy}px)`;mv.x=dx/36;mv.z=dy/36}
+['u','d','l','r'].forEach(k=>{const el=document.getElementById(k);el.ontouchstart=()=>ar[k]=1;el.ontouchend=()=>ar[k]=0});
+const pr=document.getElementById('prompt'),sh=document.getElementById('shop');
+pr.onclick=()=>{if(!run)return;if(zone==='c'){if(!job){job=true;snd(520,'triangle',.2);pr.textContent='Work Shift (+10 Coins)'}else{coins+=10;mins+=1.2;snd(680,'sine',.15);hud()}}else if(zone==='p'){document.getElementById('sc').textContent=coins;sh.style.display='flex'}};
+document.getElementById('bt').onclick=()=>{if(coins>=30&&!bigT){coins-=30;bigT=true;tl.intensity=4.2;tl.distance=40;snd(740,'triangle',.25);document.getElementById('sc').textContent=coins;hud()}};
+document.getElementById('bp').onclick=()=>{if(coins>=50&&!gun){coins-=50;gun=true;document.getElementById('fire').style.display='flex';snd(820,'sawtooth',.25);document.getElementById('sc').textContent=coins;hud()}};
+document.getElementById('cs').onclick=()=>sh.style.display='none';
+document.getElementById('fire').ontouchstart=()=>{if(!gun||!run)return;snd(140,'sawtooth',.2,.3);mons.forEach(m=>{if(m.position.distanceTo(pl.position)<20){m.userData.s=6;m.position.z-=8}})};
+function hud(){document.getElementById('nl').textContent=`NIGHT ${night} / 9`;document.getElementById('ct').textContent=coins;document.getElementById('gt').textContent=(bigT?'Big Torch':'Small Torch')+(gun?' + Pistol':'');const tot=Math.floor(mins),h=Math.floor(tot/60),m=tot%60;document.getElementById('clock').textContent=`${h}:${m<10?'0'+m:m} PM`;const g=document.getElementById('gs');if(mins>=550){g.textContent='GATE LOCKED!';g.style.color='#ef4444';gt.visible=true}else{g.textContent='Gate Closes: 9:10 PM';g.style.color='#4ade80';gt.visible=false}}
